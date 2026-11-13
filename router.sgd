@@ -6,7 +6,7 @@ const OPEN_TICKS: int = 5
 
 var people: Array = [-1, -1, -1, -1]
 var frames: Array = []
-var took: Array = []
+var due: Array = []
 var heard: Array = [0, 0, 0, 0]
 var unread: int = 0
 var now: int = 0
@@ -20,10 +20,10 @@ func _blank() -> PackedByteArray:
 
 func reset() -> bool:
 	frames = []
-	took = []
+	due = []
 	for i in SLOTS * 2:
 		frames.append(_blank())
-		took.append(-OPEN_TICKS)
+		due.append(0)
 	people = [-1, -1, -1, -1]
 	heard = [0, 0, 0, 0]
 	unread = 0
@@ -63,10 +63,10 @@ func put(slot: int, half: int, frame: PackedByteArray) -> bool:
 	if people[slot] == -1:
 		return false
 	var at: int = slot * 2 + half
-	if now - took[at] < OPEN_TICKS:
+	if now < due[at] - OPEN_TICKS:
 		unread += 1
 		return false
-	took[at] = now
+	due[at] = maxi(due[at], now) + OPEN_TICKS
 	frames[at] = frame
 	heard[slot] = now
 	return true

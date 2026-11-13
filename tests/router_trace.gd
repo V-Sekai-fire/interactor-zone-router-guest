@@ -6,16 +6,16 @@ const MAGIC := "RTRACE1\n"
 const PEOPLE := [7, 9, 12, 30]
 const ODD := {24: [1201, 0], 30: [1, 1199], 36: [1220, 1472]}
 const ITEMS := [
-	"four joins", "fifth join refused", "repeat join", "flood counted and not taken",
-	"flood on a later tick", "bad slot and bad half refused", "other lengths kept",
+	"four joins", "fifth join refused", "repeat join", "a burst of two taken and a third refused",
+	"a burst on a later tick", "bad slot and bad half refused", "other lengths kept",
 	"leave", "put to an empty slot refused", "person -1 is the empty mark",
-	"slot taken again", "taken mark outlives a leave", "a half opens five ticks after its frame", "viewer outside 0 to 3",
+	"slot taken again", "the count outlives a leave", "a half pays back a burst before it opens", "viewer outside 0 to 3",
 	"silent member emptied after 192", "put to a slot emptied by silence refused",
 	"emptied slot taken again",
 ]
 const PLANTS := {
 	"flip": ["\treturn frames[slot * 2 + half]\n", "\tvar out: PackedByteArray = frames[slot * 2 + half].duplicate()\n\tif slot == 1 and half == 0 and out.size() > 777:\n\t\tout[777] = out[777] ^ 1\n\treturn out\n"],
-	"flood": ["\tif now - took[at] < OPEN_TICKS:\n", "\tif now - took[at] < OPEN_TICKS and at < 0:\n"],
+	"flood": ["\tif now < due[at] - OPEN_TICKS:\n", "\tif now < due[at] - OPEN_TICKS and at < 0:\n"],
 	"silent": ["\t\tif people[s] != -1 and now - heard[s] > SILENT_TICKS:\n", "\t\tif people[s] != -1 and now - heard[s] >= SILENT_TICKS:\n"],
 	"window": ["const OPEN_TICKS: int = 5\n", "const OPEN_TICKS: int = 6\n"],
 	"order": ["\t\tslot = other + 1\n", "\t\tslot = 3 - other\n"],
@@ -166,7 +166,7 @@ func _send(t: int, sending: Array) -> void:
 		for half in 2:
 			for nth in [1, 2]:
 				refused += int(not _put(1, half, _bytes(1, half, t, nth, 1200)))
-		refused += int(_unread() == 4)
+		refused += int(_unread() == 2)
 	if t == 12:
 		var before := _unread()
 		var bad := [_put(4, 0, _bytes(4, 0, t, 1, 1200)), _put(255, 1, _bytes(255, 1, t, 1, 1200)), _put(0, 2, _bytes(0, 2, t, 1, 1200)), _put(2, 255, _bytes(2, 255, t, 1, 1200))]
@@ -178,7 +178,7 @@ func _send(t: int, sending: Array) -> void:
 	for viewer in 4:
 		got.append(_reads(viewer))
 	if t == 6:
-		_saw("flood counted and not taken", refused == 5 and got[0][0] == first[2] and got[0][1] == first[3])
+		_saw("a burst of two taken and a third refused", refused == 3 and got[0][0] == _bytes(1, 0, t, 1, 1200) and got[0][1] == _bytes(1, 1, t, 1, 1200))
 	if t == 36:
 		_saw("other lengths kept", got[1][0] == first[0] and got[1][1] == first[1] and first[1].size() == 1472)
 	if t == 66:
@@ -188,15 +188,15 @@ func _send(t: int, sending: Array) -> void:
 func _before(t: int, sending: Array) -> void:
 	if t == 8:
 		var before := _unread()
-		_saw("flood on a later tick", [_put(2, 1, _bytes(2, 1, t, 1, 1200)), _unread()] == [false, before + 1])
+		_saw("a burst on a later tick", [_put(2, 1, _bytes(2, 1, t, 1, 1200)), _put(2, 1, _bytes(2, 1, t, 2, 1200)), _unread()] == [true, false, before + 1])
 	if t == 12:
 		sending[3] = false
-	if t == 22:
+	if t == 20:
 		var before := _unread()
 		seen["early"] = [_put(1, 0, _bytes(1, 0, t, 1, 1200)), _unread()] == [false, before + 1]
-	if t == 23:
+	if t == 21:
 		var before := _unread()
-		_saw("a half opens five ticks after its frame", seen.get("early", false) and [_put(1, 0, _bytes(1, 0, t, 1, 1200)), _unread()] == [true, before])
+		_saw("a half pays back a burst before it opens", seen.get("early", false) and [_put(1, 0, _bytes(1, 0, t, 1, 1200)), _unread()] == [true, before])
 	if t == 50:
 		_saw("slot taken again", [_join(55), _at(1)] == [1, 55])
 		_reads(2)
@@ -230,7 +230,7 @@ func _after(t: int) -> void:
 	_saw("put to an empty slot refused", [_put(1, 0, _bytes(1, 0, t, 1, 1200)), _unread()] == [false, before])
 	_saw("person -1 is the empty mark", [_join(-1), _at(1), _leave(-1)] == [1, -1, true])
 	before = _unread()
-	_saw("taken mark outlives a leave", [_join(55), _put(1, 0, _bytes(1, 0, t, 2, 1200)), _unread()] == [1, false, before + 1])
+	_saw("the count outlives a leave", [_join(55), _put(1, 0, _bytes(1, 0, t, 2, 1200)), _put(1, 0, _bytes(1, 0, t, 3, 1200)), _unread()] == [1, true, false, before + 1])
 	_reads(0)
 
 

@@ -4,7 +4,7 @@ The model of a zone that only routes: it hands each member the others' frames an
 
 ## What is here
 
-- `router.sgd`: four slots, two frames a slot. A half is open again 5 ticks after the frame it last took, on the router's own clock; a frame that comes sooner is counted and not stored.
+- `router.sgd`: four slots, two frames a slot. A half takes one frame in 5 ticks with a burst of two, on the router's own clock; a frame beyond that is counted and not stored.
 - `tests/router_trace.gd`: writes every call and every answer of a scripted scenario to a file that a relay in another language replays. `transport-zone-relay` is held to it.
 - `docs/router-trace.md`: the file format, the scenario and the controls.
 
