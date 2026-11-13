@@ -1,0 +1,95 @@
+const SLOTS: int = 4
+const FRAME_BYTES: int = 1200
+const SILENT_TICKS: int = 192
+const SEND_TICKS: int = 6
+const OPEN_TICKS: int = 5
+
+var people: Array = [-1, -1, -1, -1]
+var frames: Array = []
+var took: Array = []
+var heard: Array = [0, 0, 0, 0]
+var unread: int = 0
+var now: int = 0
+
+
+func _blank() -> PackedByteArray:
+	var blank: PackedByteArray = PackedByteArray()
+	blank.resize(FRAME_BYTES)
+	return blank
+
+
+func reset() -> bool:
+	frames = []
+	took = []
+	for i in SLOTS * 2:
+		frames.append(_blank())
+		took.append(-OPEN_TICKS)
+	people = [-1, -1, -1, -1]
+	heard = [0, 0, 0, 0]
+	unread = 0
+	now = 0
+	return true
+
+
+func join(person: int) -> int:
+	for s in SLOTS:
+		if people[s] == person:
+			return s
+	for s in SLOTS:
+		if people[s] == -1:
+			people[s] = person
+			heard[s] = now
+			return s
+	return -1
+
+
+func leave(person: int) -> bool:
+	for s in SLOTS:
+		if people[s] == person:
+			people[s] = -1
+			frames[s * 2] = _blank()
+			frames[s * 2 + 1] = _blank()
+			return true
+	return false
+
+
+func person_at(slot: int) -> int:
+	return people[slot]
+
+
+func put(slot: int, half: int, frame: PackedByteArray) -> bool:
+	if slot < 0 or slot >= SLOTS or half < 0 or half > 1:
+		return false
+	if people[slot] == -1:
+		return false
+	var at: int = slot * 2 + half
+	if now - took[at] < OPEN_TICKS:
+		unread += 1
+		return false
+	took[at] = now
+	frames[at] = frame
+	heard[slot] = now
+	return true
+
+
+func frame(viewer: int, k: int) -> PackedByteArray:
+	var other: int = k / 2
+	var half: int = k % 2
+	var slot: int = other
+	if other >= viewer:
+		slot = other + 1
+	return frames[slot * 2 + half]
+
+
+func tick() -> int:
+	now += 1
+	for s in SLOTS:
+		if people[s] != -1 and now - heard[s] > SILENT_TICKS:
+			people[s] = -1
+			frames[s * 2] = _blank()
+			frames[s * 2 + 1] = _blank()
+	return now
+
+
+func unread_count() -> int:
+	return unread
